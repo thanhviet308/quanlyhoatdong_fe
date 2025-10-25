@@ -6,7 +6,8 @@ import 'package:intl/intl.dart';
 import '../activity_detail_page.dart';
 
 class ActivitiesTab extends StatefulWidget {
-  const ActivitiesTab({super.key});
+  final bool readOnly; // dùng cho teacher để chỉ xem, không đăng ký
+  const ActivitiesTab({super.key, this.readOnly = false});
 
   @override
   State<ActivitiesTab> createState() => _ActivitiesTabState();
@@ -59,9 +60,13 @@ class _ActivitiesTabState extends State<ActivitiesTab> {
         page: _page,
         limit: _limit,
       );
+      // Ẩn các hoạt động đã kết thúc (CLOSED)
+      final filtered = res.items
+          .where((a) => (a.status ?? '').toUpperCase() != 'CLOSED')
+          .toList();
       setState(() {
         _pages = res.pages;
-        _items = res.items;
+        _items = filtered;
       });
     } catch (e) {
       if (mounted) {
@@ -107,10 +112,13 @@ class _ActivitiesTabState extends State<ActivitiesTab> {
         page: next,
         limit: _limit,
       );
+      final filtered = res.items
+          .where((a) => (a.status ?? '').toUpperCase() != 'CLOSED')
+          .toList();
       setState(() {
         _page = res.page;
         _pages = res.pages;
-        _items.addAll(res.items);
+        _items.addAll(filtered);
       });
     } catch (e) {
       if (mounted) {
@@ -128,6 +136,8 @@ class _ActivitiesTabState extends State<ActivitiesTab> {
     // Tuỳ locale: vi_VN
     return DateFormat('EEE, dd/MM • HH:mm', 'vi_VN').format(dt);
   }
+
+  // _statusVi no longer used (status now displayed as Chip)
 
   @override
   Widget build(BuildContext context) {
@@ -199,8 +209,6 @@ class _ActivitiesTabState extends State<ActivitiesTab> {
                             final it = _items[i];
                             final subtitle = [
                               if (it.startTime != null) _fmtDate(it.startTime),
-                              if (it.status != null && it.status!.isNotEmpty)
-                                '• ${it.status}',
                               if (it.capacity != null) '• SL: ${it.capacity}',
                             ].join(' ');
 
@@ -225,8 +233,11 @@ class _ActivitiesTabState extends State<ActivitiesTab> {
                                   final changed = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) =>
-                                          ActivityDetailPage(activity: it),
+                                      builder: (_) => ActivityDetailPage(
+                                        activity: it,
+                                        readOnly: widget.readOnly,
+                                        isRegistered: isReg,
+                                      ),
                                     ),
                                   );
                                   if (changed == true) {

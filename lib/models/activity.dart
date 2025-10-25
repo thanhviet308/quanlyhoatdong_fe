@@ -9,6 +9,7 @@ class Activity {
   final int? capacity;
   final String? status;
   final int? createdBy;
+  final String? location;
 
   Activity({
     required this.id,
@@ -21,6 +22,7 @@ class Activity {
     this.capacity,
     this.status,
     this.createdBy,
+    this.location,
   });
 
   factory Activity.fromJson(Map<String, dynamic> j) {
@@ -39,6 +41,7 @@ class Activity {
       capacity: j['capacity'],
       status: j['status'],
       createdBy: j['created_by'],
+      location: j['location'],
     );
   }
 }

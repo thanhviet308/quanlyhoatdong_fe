@@ -168,6 +168,18 @@ class _ProfileTabState extends State<ProfileTab> {
     final email = _me?['email'] ?? '';
     final role = _me?['role'] ?? 'STUDENT';
 
+    String _roleVi(String s) {
+      switch (s.toUpperCase()) {
+        case 'ADMIN':
+          return 'Quản trị';
+        case 'TEACHER':
+          return 'Giáo viên';
+        case 'STUDENT':
+        default:
+          return 'Sinh viên';
+      }
+    }
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
@@ -179,7 +191,7 @@ class _ProfileTabState extends State<ProfileTab> {
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             subtitle: Text(email.isNotEmpty ? email : '—'),
-            trailing: Chip(label: Text(role)),
+            trailing: Chip(label: Text(_roleVi(role))),
           ),
         ),
         const SizedBox(height: 12),

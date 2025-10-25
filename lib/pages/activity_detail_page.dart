@@ -5,7 +5,14 @@ import '../services/registration_api.dart';
 
 class ActivityDetailPage extends StatefulWidget {
   final Activity activity;
-  const ActivityDetailPage({super.key, required this.activity});
+  final bool readOnly; // ẩn thanh đăng ký khi true (dùng cho giáo viên)
+  final bool isRegistered; // sinh viên đã đăng ký rồi
+  const ActivityDetailPage({
+    super.key,
+    required this.activity,
+    this.readOnly = false,
+    this.isRegistered = false,
+  });
 
   @override
   State<ActivityDetailPage> createState() => _ActivityDetailPageState();
@@ -14,9 +21,23 @@ class ActivityDetailPage extends StatefulWidget {
 class _ActivityDetailPageState extends State<ActivityDetailPage> {
   bool _submitting = false;
 
-  String _fmt(DateTime? dt, {String p = 'EEE, dd/MM/yyyy • HH:mm'}) {
+  // Hiển thị thời gian có giờ/phút cho start/end, và ngày cho reg window
+  String _fmtDT(DateTime? dt) {
     if (dt == null) return '-';
-    return DateFormat(p, 'vi_VN').format(dt);
+    return DateFormat('EEE, dd/MM • HH:mm', 'vi_VN').format(dt);
+  }
+
+  String _fmtD(DateTime? dt) {
+    if (dt == null) return '-';
+    return DateFormat('dd/MM/yyyy', 'vi_VN').format(dt);
+  }
+
+  String _statusVi(String? s) {
+    final up = (s ?? '').toUpperCase();
+    if (up == 'OPEN') return 'Đang mở';
+    if (up == 'ONGOING') return 'Đang diễn ra';
+    if (up == 'CLOSED') return 'Kết thúc';
+    return s ?? '';
   }
 
   Future<void> _register() async {
@@ -44,18 +65,40 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
   Widget build(BuildContext context) {
     final a = widget.activity;
     final now = DateTime.now();
-    final afterStart = a.regStart == null || !now.isBefore(a.regStart!);
-    final beforeEnd = a.regEnd == null || !now.isAfter(a.regEnd!);
+    // Đăng ký dùng DATEONLY trên backend → so sánh theo ngày, không theo giờ
+    final today = DateTime(now.year, now.month, now.day);
+    final rs = a.regStart == null
+        ? null
+        : DateTime(a.regStart!.year, a.regStart!.month, a.regStart!.day);
+    final re = a.regEnd == null
+        ? null
+        : DateTime(a.regEnd!.year, a.regEnd!.month, a.regEnd!.day);
+
+    final st = (a.status ?? '').toUpperCase();
+    final isOpen = st == 'OPEN';
+    final afterStart = rs == null || !today.isBefore(rs);
+    final beforeEnd = re == null || !today.isAfter(re);
+    final alreadyReg = widget.isRegistered == true;
     final canRegister =
-        afterStart && beforeEnd; // chỉ cho đăng ký khi đang trong cửa sổ
+        isOpen &&
+        afterStart &&
+        beforeEnd &&
+        !alreadyReg; // chỉ khi OPEN, trong cửa sổ và chưa đăng ký
 
     String ctaText() {
       if (_submitting) return 'Đang đăng ký…';
+      // Ưu tiên hiển thị đã đăng ký nếu user đã đăng ký trước đó
+      if (alreadyReg) return 'Đã đăng ký';
       if (!canRegister) {
-        if (a.regEnd != null && now.isAfter(a.regEnd!))
+        if (!isOpen) {
+          return 'Đã hết thời gian đăng ký';
+        }
+        if (a.regEnd != null && today.isAfter(re!)) {
           return 'Đã hết hạn đăng ký';
-        if (a.regStart != null && now.isBefore(a.regStart!))
+        }
+        if (a.regStart != null && today.isBefore(rs!)) {
           return 'Chưa mở đăng ký';
+        }
         return 'Không thể đăng ký';
       }
       return 'Đăng ký tham gia';
@@ -84,20 +127,24 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                   _row(
                     Icons.event,
                     'Thời gian',
-                    '${_fmt(a.startTime)} — ${_fmt(a.endTime)}',
+                    '${_fmtDT(a.startTime)} — ${_fmtDT(a.endTime)}',
                   ),
                   const SizedBox(height: 8),
+                  if ((a.location ?? '').isNotEmpty) ...[
+                    _row(Icons.place_outlined, 'Địa điểm', a.location!),
+                    const SizedBox(height: 8),
+                  ],
                   _row(
                     Icons.how_to_reg,
                     'Mở đăng ký',
-                    '${_fmt(a.regStart)} — ${_fmt(a.regEnd)}',
+                    '${_fmtD(a.regStart)} — ${_fmtD(a.regEnd)}',
                   ),
                   const SizedBox(height: 8),
                   if (a.capacity != null)
                     _row(Icons.people_alt, 'Số lượng', '${a.capacity}'),
                   if ((a.status ?? '').isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    _row(Icons.info_outline, 'Trạng thái', a.status!),
+                    _row(Icons.info_outline, 'Trạng thái', _statusVi(a.status)),
                   ],
                 ],
               ),
@@ -105,19 +152,37 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-          child: SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: (_submitting || !canRegister) ? null : _register,
-              icon: const Icon(Icons.check_circle_outline),
-              label: Text(ctaText()),
+      bottomNavigationBar: widget.readOnly
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: (_submitting || !canRegister) ? null : _register,
+                    style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.resolveWith((
+                        states,
+                      ) {
+                        if (states.contains(MaterialState.disabled))
+                          return Colors.grey;
+                        return null; // dùng mặc định khi enabled
+                      }),
+                      foregroundColor: MaterialStateProperty.resolveWith((
+                        states,
+                      ) {
+                        if (states.contains(MaterialState.disabled))
+                          return Colors.white;
+                        return null;
+                      }),
+                    ),
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: Text(ctaText()),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 

@@ -64,6 +64,14 @@ class _RegisteredTabState extends State<RegisteredTab> {
       );
     }
 
+    String _actStatusVi(String? s) {
+      final up = (s ?? '').toUpperCase();
+      if (up == 'OPEN') return 'Đang mở';
+      if (up == 'ONGOING') return 'Đang diễn ra';
+      if (up == 'CLOSED') return 'Kết thúc';
+      return s ?? '';
+    }
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
@@ -72,13 +80,6 @@ class _RegisteredTabState extends State<RegisteredTab> {
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, i) {
           final it = _items[i];
-          final status = (it['status'] as String?) ?? '';
-          final color = switch (status) {
-            'APPROVED' => Colors.green,
-            'PENDING' => Colors.orange,
-            'CANCELED' => Colors.red,
-            _ => Colors.grey,
-          };
           final activity = (it['activity'] as Map?)?.cast<String, dynamic>();
           final title =
               activity?['title'] as String? ?? 'Hoạt động #${it['id'] ?? ''}';
@@ -86,19 +87,27 @@ class _RegisteredTabState extends State<RegisteredTab> {
           final dt = start != null && start.isNotEmpty
               ? DateTime.tryParse(start)
               : null;
-          final timeText = dt != null
+          final timeOnly = dt != null
               ? DateFormat('EEE, dd/MM/yyyy', 'vi_VN').format(dt)
               : '';
+          final actStatus = (activity?['status'] as String?) ?? '';
+          final actColor = switch (actStatus.toUpperCase()) {
+            'OPEN' => Colors.blue,
+            'ONGOING' => Colors.orange,
+            'CLOSED' => Colors.grey,
+            _ => Colors.blueGrey,
+          };
+          final subtitle = [if (timeOnly.isNotEmpty) timeOnly].join(' ');
           return Card(
             child: ListTile(
               title: Text(title),
-              subtitle: Text(timeText),
+              subtitle: Text(subtitle),
               trailing: Chip(
-                label: Text(status),
+                label: Text(_actStatusVi(actStatus)),
                 side: BorderSide.none,
-                backgroundColor: color.withOpacity(0.12),
+                backgroundColor: actColor.withOpacity(0.12),
                 labelStyle: TextStyle(
-                  color: color,
+                  color: actColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),

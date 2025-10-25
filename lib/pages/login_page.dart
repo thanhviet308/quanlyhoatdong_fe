@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
 import 'register_page.dart';
 import 'student_home_page.dart';
+import 'teacher_home_page.dart';
 // services
 import '../services/auth_api.dart';
 import '../services/token_storage.dart';
@@ -79,10 +80,15 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
 
-      // 5) Điều hướng vào Home và xoá lịch sử để không quay lại Login bằng back
+      // 5) Điều hướng theo vai trò và xoá lịch sử để không quay lại Login bằng back
+      final role = ((me['role'] ?? '') as String).toUpperCase();
+      final isTeacher = role == 'TEACHER' || role == 'ADMIN';
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const StudentHomePage()),
+        MaterialPageRoute(
+          builder: (_) =>
+              isTeacher ? const TeacherHomePage() : const StudentHomePage(),
+        ),
         (route) => false,
       );
     } catch (e) {

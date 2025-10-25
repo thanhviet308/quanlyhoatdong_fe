@@ -21,6 +21,27 @@ class _RegistrationDetailPageState extends State<RegistrationDetailPage> {
     return DateFormat(pattern, 'vi_VN').format(dt);
   }
 
+  String _regStatusVi(String s) {
+    switch (s.toUpperCase()) {
+      case 'APPROVED':
+        return 'Đã duyệt';
+      case 'PENDING':
+        return 'Chờ duyệt';
+      case 'CANCELED':
+        return 'Đã hủy';
+      default:
+        return s;
+    }
+  }
+
+  String _actStatusVi(String? s) {
+    final up = (s ?? '').toUpperCase();
+    if (up == 'OPEN') return 'Đang mở';
+    if (up == 'ONGOING') return 'Đang diễn ra';
+    if (up == 'CLOSED') return 'Kết thúc';
+    return s ?? '';
+  }
+
   Future<void> _confirmAndUnregister(int activityId) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -89,8 +110,12 @@ class _RegistrationDetailPageState extends State<RegistrationDetailPage> {
     final start = activity['start_time'] as String?;
     final end = activity['end_time'] as String?;
     final capacity = activity['capacity'];
+    final location = activity['location'] as String?;
     final activityStatus = activity['status'] as String? ?? '';
     final activityId = activity['id'] as int?;
+    final up = activityStatus.toString().toUpperCase();
+    final isOngoing = up == 'ONGOING';
+    final isClosed = up == 'CLOSED';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Chi tiết đăng ký')),
@@ -102,7 +127,7 @@ class _RegistrationDetailPageState extends State<RegistrationDetailPage> {
           Row(
             children: [
               Chip(
-                label: Text(status),
+                label: Text(_regStatusVi(status)),
                 side: BorderSide.none,
                 backgroundColor: statusColor.withOpacity(0.12),
                 labelStyle: TextStyle(
@@ -113,7 +138,7 @@ class _RegistrationDetailPageState extends State<RegistrationDetailPage> {
               const SizedBox(width: 8),
               if (activityStatus.isNotEmpty)
                 Chip(
-                  label: Text(activityStatus),
+                  label: Text(_actStatusVi(activityStatus)),
                   side: BorderSide.none,
                   backgroundColor: Colors.blueGrey.withOpacity(0.1),
                 ),
@@ -132,6 +157,10 @@ class _RegistrationDetailPageState extends State<RegistrationDetailPage> {
                     '${_fmtDate(start)} — ${_fmtDate(end)}',
                   ),
                   const SizedBox(height: 8),
+                  if ((location ?? '').isNotEmpty) ...[
+                    _row(Icons.place_outlined, 'Địa điểm', location!),
+                    const SizedBox(height: 8),
+                  ],
                   _row(Icons.people, 'Số lượng', capacity?.toString() ?? '-'),
                   const SizedBox(height: 8),
                   _row(
@@ -152,14 +181,24 @@ class _RegistrationDetailPageState extends State<RegistrationDetailPage> {
             width: double.infinity,
             child: FilledButton.icon(
               onPressed:
-                  (_submitting || activityId == null || status == 'CANCELED')
+                  (_submitting ||
+                      activityId == null ||
+                      status == 'CANCELED' ||
+                      isOngoing ||
+                      isClosed)
                   ? null
                   : () => _confirmAndUnregister(activityId),
               icon: const Icon(Icons.cancel_outlined),
               label: Text(
                 _submitting
                     ? 'Đang hủy…'
-                    : (status == 'CANCELED' ? 'Đã hủy đăng ký' : 'Hủy đăng ký'),
+                    : (status == 'CANCELED'
+                          ? 'Đã hủy đăng ký'
+                          : (isOngoing
+                                ? 'Không thể hủy khi đang diễn ra'
+                                : (isClosed
+                                      ? 'Không thể hủy khi đã kết thúc'
+                                      : 'Hủy đăng ký'))),
               ),
             ),
           ),

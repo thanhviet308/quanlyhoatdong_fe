@@ -31,4 +31,37 @@ class RegistrationApi {
     );
     return res;
   }
+
+  // GET /api/activities/:id/participants
+  static Future<Map<String, dynamic>> listParticipants(
+    int activityId, {
+    int page = 1,
+    int limit = 100,
+    String status = '', // APPROVED/PENDING/CANCELED
+  }) async {
+    final qp = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+      if (status.trim().isNotEmpty) 'status': status.trim(),
+    };
+    final query = qp.entries
+        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
+        .join('&');
+
+    return apiClient.get(
+      '/api/activities/$activityId/participants${query.isNotEmpty ? '?$query' : ''}',
+    );
+  }
+
+  // PUT /api/activities/:id/participants/:userId/attendance
+  static Future<void> updateAttendance(
+    int activityId,
+    int userId,
+    String attendanceStatus, // PRESENT/ABSENT/LATE
+  ) async {
+    await apiClient.put(
+      '/api/activities/$activityId/participants/$userId/attendance',
+      body: {'attendance_status': attendanceStatus},
+    );
+  }
 }

@@ -36,12 +36,15 @@ class ActivityApi {
     String q = '',
     int page = 1,
     int limit = 20,
+    String status =
+        '', // EN: OPEN/ONGOING/CLOSED or VI labels accepted by backend
   }) async {
     final uri = Uri.parse('$kApiBase/api/activities').replace(
       queryParameters: {
         if (q.trim().isNotEmpty) 'q': q.trim(),
         'page': page.toString(),
         'limit': limit.toString(),
+        if (status.trim().isNotEmpty) 'status': status.trim(),
       },
     );
 
