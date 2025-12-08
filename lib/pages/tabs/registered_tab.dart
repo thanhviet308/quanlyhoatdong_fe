@@ -28,9 +28,13 @@ class _RegisteredTabState extends State<RegisteredTab> {
         page: _page,
         limit: 20,
       );
+      // Ẩn những đăng ký đã hủy để tab "Đã đăng ký" chỉ hiển thị còn hiệu lực
       final items = (data['items'] as List? ?? [])
           .cast<Map>()
           .map((e) => e.cast<String, dynamic>())
+          .where(
+            (m) => ((m['status'] as String?) ?? '').toUpperCase() != 'CANCELED',
+          )
           .toList();
       _items = items;
       _page = (data['page'] as int?) ?? 1;

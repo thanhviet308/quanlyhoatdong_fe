@@ -24,7 +24,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final _pwd2Ctrl = TextEditingController();
 
   bool _ob1 = true, _ob2 = true;
-  bool _agree = false;
   bool _submitting = false;
 
   @override
@@ -40,12 +39,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> _submitRegister() async {
     if (_submitting) return;
-    if (!_agree) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vui lòng đồng ý điều khoản")),
-      );
-      return;
-    }
     if (!_formKey.currentState!.validate()) return;
 
     final username = _usernameCtrl.text.trim().toLowerCase();

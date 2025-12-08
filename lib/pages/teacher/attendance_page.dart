@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/activity.dart';
 import '../../services/registration_api.dart';
+import '../../services/auth_api.dart';
 import 'package:intl/intl.dart';
 
 class AttendancePage extends StatefulWidget {
@@ -14,11 +15,37 @@ class AttendancePage extends StatefulWidget {
 class _AttendancePageState extends State<AttendancePage> {
   bool _loading = false;
   List<Map<String, dynamic>> _items = [];
+  Map<String, dynamic>? _me;
+  bool get _isAdmin =>
+      (_me?['role']?.toString().toUpperCase() ?? '') == 'ADMIN';
+  bool get _isTeacher =>
+      (_me?['role']?.toString().toUpperCase() ?? '') == 'TEACHER';
+  bool get _isOwnerTeacher {
+    if (!_isTeacher) return false;
+    final meId = _me?['id'];
+    return meId != null && widget.activity.createdBy == meId;
+  }
+
+  bool get _canManage => _isAdmin || _isOwnerTeacher;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    await _loadMe();
+    await _load();
+  }
+
+  Future<void> _loadMe() async {
+    try {
+      final me = await AuthApi.me();
+      if (mounted) setState(() => _me = me);
+    } catch (_) {
+      // ignore, treat as null
+    }
   }
 
   Future<void> _load() async {
@@ -91,6 +118,20 @@ class _AttendancePageState extends State<AttendancePage> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  if (_isTeacher && !_canManage)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        border: Border.all(color: Colors.amber.shade200),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Chỉ người tạo hoạt động mới được điểm danh hoạt động này.',
+                        style: TextStyle(color: Colors.black87),
+                      ),
+                    ),
                   Row(
                     children: [
                       const Icon(Icons.group_outlined, size: 18),
@@ -155,19 +196,25 @@ class _AttendancePageState extends State<AttendancePage> {
                 ],
               ),
             ),
-            PopupMenuButton<String>(
-              tooltip: 'Chọn điểm danh',
-              onSelected: (v) => _setAttendance(userId, v),
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'PRESENT', child: Text('Có mặt')),
-                PopupMenuItem(value: 'ABSENT', child: Text('Vắng')),
-                PopupMenuItem(value: 'LATE', child: Text('Đi trễ')),
-              ],
-              child: const Padding(
+            if (_canManage)
+              PopupMenuButton<String>(
+                tooltip: 'Chọn điểm danh',
+                onSelected: (v) => _setAttendance(userId, v),
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'PRESENT', child: Text('Có mặt')),
+                  PopupMenuItem(value: 'ABSENT', child: Text('Vắng')),
+                  PopupMenuItem(value: 'LATE', child: Text('Đi trễ')),
+                ],
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Icon(Icons.checklist, color: Colors.green),
+                ),
+              )
+            else
+              const Padding(
                 padding: EdgeInsets.all(8.0),
-                child: Icon(Icons.checklist, color: Colors.green),
+                child: Icon(Icons.lock_outline, color: Colors.grey),
               ),
-            ),
           ],
         ),
       ),

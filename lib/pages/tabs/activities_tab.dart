@@ -81,6 +81,7 @@ class _ActivitiesTabState extends State<ActivitiesTab> {
 
   Future<void> _loadRegistered() async {
     try {
+      // Lấy danh sách đăng ký của tôi; loại bỏ các đăng ký đã hủy để UI hiển thị đúng
       final data = await RegistrationApi.myRegistrations(page: 1, limit: 1000);
       final items = (data['items'] as List? ?? []);
       final ids = <int>{};
@@ -88,8 +89,9 @@ class _ActivitiesTabState extends State<ActivitiesTab> {
         final m = (e as Map).cast<String, dynamic>();
         final act = (m['activity'] as Map?)?.cast<String, dynamic>();
         final id = act?['id'];
-        final status = (m['status'] as String?) ?? '';
-        if (id is int && status.isNotEmpty) ids.add(id);
+        final status = ((m['status'] as String?) ?? '').toUpperCase();
+        // chỉ tính là đã đăng ký khi không phải CANCELED
+        if (id is int && status.isNotEmpty && status != 'CANCELED') ids.add(id);
       }
       if (mounted)
         setState(() {
